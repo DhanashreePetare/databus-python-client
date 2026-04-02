@@ -59,6 +59,7 @@ def fetch_databus_jsonld(uri: str, databus_key: str | None = None) -> str:
 
     return response.text
 
+
 def compute_sha256_and_length(filepath):
     sha256 = hashlib.sha256()
     total_length = 0

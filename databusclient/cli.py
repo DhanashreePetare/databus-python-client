@@ -29,9 +29,21 @@ def app():
     help="Target databus version/dataset identifier of the form "
     "<https://databus.dbpedia.org/$ACCOUNT/$GROUP/$ARTIFACT/$VERSION>",
 )
-@click.option("--title", required=True, help="Artifact & Version Title: used for BOTH artifact and version. Keep stable across releases; identifies the data series.")
-@click.option("--abstract", required=True, help="Artifact & Version Abstract: used for BOTH artifact and version (max 200 chars). Updating it changes both artifact and version metadata.")
-@click.option("--description", required=True, help="Artifact & Version Description: used for BOTH artifact and version. Supports Markdown. Updating it changes both artifact and version metadata.")
+@click.option(
+    "--title",
+    required=True,
+    help="Artifact & Version Title: used for BOTH artifact and version. Keep stable across releases; identifies the data series.",
+)
+@click.option(
+    "--abstract",
+    required=True,
+    help="Artifact & Version Abstract: used for BOTH artifact and version (max 200 chars). Updating it changes both artifact and version metadata.",
+)
+@click.option(
+    "--description",
+    required=True,
+    help="Artifact & Version Description: used for BOTH artifact and version. Supports Markdown. Updating it changes both artifact and version metadata.",
+)
 @click.option(
     "--license", "license_url", required=True, help="License (see dalicc.net)"
 )
@@ -91,7 +103,7 @@ def deploy(
             artifact_version_abstract=abstract,
             artifact_version_description=description,
             license_url=license_url,
-            distributions=distributions
+            distributions=distributions,
         )
         api_deploy.deploy(dataid=dataid, api_key=apikey)
         return
@@ -178,9 +190,7 @@ def deploy(
     help="Source compression format to convert from (optional filter). Only files with this compression will be converted.",
 )
 @click.option(
-    "--validate-checksum",
-    is_flag=True,
-    help="Validate checksums of downloaded files"
+    "--validate-checksum", is_flag=True, help="Validate checksums of downloaded files"
 )
 def download(
     databusuris: List[str],

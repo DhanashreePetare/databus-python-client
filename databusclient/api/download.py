@@ -33,10 +33,10 @@ COMPRESSION_MODULES = {
 
 def _detect_compression_format(filename: str) -> Optional[str]:
     """Detect compression format from file extension.
-    
+
     Args:
         filename: Name of the file.
-    
+
     Returns:
         Compression format string ('bz2', 'gz', 'xz') or None if not compressed.
     """
@@ -51,43 +51,45 @@ def _should_convert_file(
     filename: str, convert_to: Optional[str], convert_from: Optional[str]
 ) -> Tuple[bool, Optional[str]]:
     """Determine if a file should be converted and what the source format is.
-    
+
     Args:
         filename: Name of the file.
         convert_to: Target compression format ('bz2', 'gz', 'xz').
         convert_from: Optional source compression format filter.
-    
+
     Returns:
         Tuple of (should_convert: bool, source_format: Optional[str]).
     """
     if not convert_to:
         return False, None
-    
+
     source_format = _detect_compression_format(filename)
-    
+
     # If file is not compressed, don't convert
     if source_format is None:
         return False, None
-    
+
     # If source and target are the same, skip conversion
     if source_format == convert_to:
         return False, None
-    
+
     # If convert_from is specified, only convert matching formats
     if convert_from and source_format != convert_from:
         return False, None
-    
+
     return True, source_format
 
 
-def _get_converted_filename(filename: str, source_format: str, target_format: str) -> str:
+def _get_converted_filename(
+    filename: str, source_format: str, target_format: str
+) -> str:
     """Generate the new filename after compression format conversion.
-    
+
     Args:
         filename: Original filename.
         source_format: Source compression format ('bz2', 'gz', 'xz').
         target_format: Target compression format ('bz2', 'gz', 'xz').
-    
+
     Returns:
         New filename with updated extension.
     """
@@ -96,7 +98,7 @@ def _get_converted_filename(filename: str, source_format: str, target_format: st
 
     # Handle case-insensitive extension matching
     if filename.lower().endswith(source_ext):
-        return filename[:-len(source_ext)] + target_ext
+        return filename[: -len(source_ext)] + target_ext
     return filename + target_ext
 
 
@@ -104,40 +106,46 @@ def _convert_compression_format(
     source_file: str, target_file: str, source_format: str, target_format: str
 ) -> None:
     """Convert a compressed file from one format to another.
-    
+
     Args:
         source_file: Path to source compressed file.
         target_file: Path to target compressed file.
         source_format: Source compression format ('bz2', 'gz', 'xz').
         target_format: Target compression format ('bz2', 'gz', 'xz').
-    
+
     Raises:
         ValueError: If source_format or target_format is not supported.
         RuntimeError: If compression conversion fails.
     """
     # Validate compression formats
     if source_format not in COMPRESSION_MODULES:
-        raise ValueError(f"Unsupported source compression format: {source_format}. Supported formats: {list(COMPRESSION_MODULES.keys())}")
+        raise ValueError(
+            f"Unsupported source compression format: {source_format}. Supported formats: {list(COMPRESSION_MODULES.keys())}"
+        )
     if target_format not in COMPRESSION_MODULES:
-        raise ValueError(f"Unsupported target compression format: {target_format}. Supported formats: {list(COMPRESSION_MODULES.keys())}")
-    
+        raise ValueError(
+            f"Unsupported target compression format: {target_format}. Supported formats: {list(COMPRESSION_MODULES.keys())}"
+        )
+
     source_module = COMPRESSION_MODULES[source_format]
     target_module = COMPRESSION_MODULES[target_format]
-    
-    print(f"Converting {source_format} → {target_format}: {os.path.basename(source_file)}")
-    
+
+    print(
+        f"Converting {source_format} → {target_format}: {os.path.basename(source_file)}"
+    )
+
     # Decompress and recompress with progress indication
     chunk_size = 8192
-    
+
     try:
-        with source_module.open(source_file, 'rb') as sf:
-            with target_module.open(target_file, 'wb') as tf:
+        with source_module.open(source_file, "rb") as sf:
+            with target_module.open(target_file, "wb") as tf:
                 while True:
                     chunk = sf.read(chunk_size)
                     if not chunk:
                         break
                     tf.write(chunk)
-        
+
         # Remove the original file after successful conversion
         os.remove(source_file)
         print(f"Conversion complete: {os.path.basename(target_file)}")
@@ -147,8 +155,31 @@ def _convert_compression_format(
             os.remove(target_file)
         raise RuntimeError(f"Compression conversion failed: {e}")
 
+
+def get_expected_checksum(databusURI: str, databus_key: str) -> str | None:
+    expected = None
+
+    host, account, group, artifact, version, file = get_databus_id_parts_from_file_url(
+        databusURI
+    )
+
+    try:
+        if version is not None:
+            version_uri = f"https://{host}/{account}/{group}/{artifact}/{version}"
+            json_str = fetch_databus_jsonld(version_uri, databus_key=databus_key)
+            checks = _extract_checksums_from_jsonld(json_str)
+            expected = checks.get(databusURI) or checks.get(
+                "https://" + databusURI.removeprefix("http://").removeprefix("https://")
+            )
+    except Exception as e:
+        print(f"WARNING: Could not fetch checksum for single file: {e}")
+
+    return expected
+
+
 # compiled regex for SHA-256 hex strings
 _SHA256_RE = re.compile(r"^[0-9a-fA-F]{64}$")
+
 
 def _extract_checksum_from_node(node) -> str | None:
     """
@@ -158,6 +189,7 @@ def _extract_checksum_from_node(node) -> str | None:
     - checksum fields as dict with '@value'
     - nested values under the allowed keys (lists or '@value' objects)
     """
+
     def find_in_value(v):
         if isinstance(v, str):
             s = v.strip()
@@ -191,7 +223,6 @@ def _extract_checksum_from_node(node) -> str | None:
     return None
 
 
-
 # Hosts that require Vault token based authentication. Central source of truth.
 VAULT_REQUIRED_HOSTS = {
     "data.dbpedia.io",
@@ -201,7 +232,6 @@ VAULT_REQUIRED_HOSTS = {
 
 class DownloadAuthError(Exception):
     """Raised when an authorization problem occurs during download."""
-
 
 
 def _extract_checksums_from_jsonld(json_str: str) -> dict:
@@ -221,8 +251,8 @@ def _extract_checksums_from_jsonld(json_str: str) -> dict:
     elif isinstance(jd, list):
         graph = jd
     else:
-        return{}
-                    
+        return {}
+
     checksums: dict = {}
     for node in graph:
         if node.get("@type") == "Part":
@@ -248,7 +278,9 @@ def _resolve_checksums_for_urls(file_urls: List[str], databus_key: str | None) -
     versions_map: dict = {}
     for file_url in file_urls:
         try:
-            host, accountId, groupId, artifactId, versionId, fileId = get_databus_id_parts_from_file_url(file_url)
+            host, accountId, groupId, artifactId, versionId, fileId = (
+                get_databus_id_parts_from_file_url(file_url)
+            )
         except Exception:
             continue
         if versionId is None:
@@ -270,6 +302,7 @@ def _resolve_checksums_for_urls(file_urls: List[str], databus_key: str | None) -
             # Best-effort: skip versions we cannot fetch or parse
             continue
     return checksums
+
 
 def _download_file(
     url,
@@ -353,7 +386,9 @@ def _download_file(
         else:
             # Not a vault host; might need databus API key
             if not databus_key:
-                raise DownloadAuthError("Databus API key not given for protected download")
+                raise DownloadAuthError(
+                    "Databus API key not given for protected download"
+                )
             headers = {"X-API-KEY": databus_key}
             response = requests.head(url, headers=headers, timeout=30)
 
@@ -364,7 +399,9 @@ def _download_file(
     response = requests.get(
         url, headers=headers, stream=True, allow_redirects=True, timeout=30
     )
-    www = response.headers.get("WWW-Authenticate", "")  # Check if authentication is required
+    www = response.headers.get(
+        "WWW-Authenticate", ""
+    )  # Check if authentication is required
 
     # --- 3. Handle authentication responses ---
     # 3a. Server requests Bearer auth. Only attempt token exchange for hosts
@@ -391,20 +428,25 @@ def _download_file(
         # for user-friendly CLI output.
         vault_token = __get_vault_access__(url, vault_token_file, auth_url, client_id)
         headers["Authorization"] = f"Bearer {vault_token}"
-        headers["Accept-Encoding"] = "identity"
 
         # Retry with token
         response = requests.get(url, headers=headers, stream=True, timeout=30)
 
         # Map common auth failures to friendly messages
         if response.status_code == 401:
-            raise DownloadAuthError("Vault token is invalid or expired. Please generate a new token.")
+            raise DownloadAuthError(
+                "Vault token is invalid or expired. Please generate a new token."
+            )
         if response.status_code == 403:
-            raise DownloadAuthError("Vault token is valid but has insufficient permissions to access this file.")
+            raise DownloadAuthError(
+                "Vault token is valid but has insufficient permissions to access this file."
+            )
 
     # 3c. Generic forbidden without Bearer challenge
     if response.status_code == 403:
-        raise DownloadAuthError("Access forbidden: your token or API key does not have permission to download this file.")
+        raise DownloadAuthError(
+            "Access forbidden: your token or API key does not have permission to download this file."
+        )
 
     # 3d. Generic unauthorized without Bearer
     if response.status_code == 401:
@@ -446,14 +488,18 @@ def _download_file(
             actual = None
 
         if expected_checksum is None:
-            print(f"WARNING: no expected checksum available for {filename}; skipping validation")
+            print(
+                f"WARNING: no expected checksum available for {filename}; skipping validation"
+            )
         elif actual is None:
-            print(f"WARNING: could not compute checksum for {filename}; skipping validation")
+            print(
+                f"WARNING: could not compute checksum for {filename}; skipping validation"
+            )
         else:
             if actual.lower() != expected_checksum.lower():
-                try: 
+                try:
                     os.remove(filename)  # delete corrupted file
-                except OSError: 
+                except OSError:
                     pass
                 raise IOError(
                     f"Checksum mismatch for {filename}: expected {expected_checksum}, got {actual}"
@@ -464,7 +510,9 @@ def _download_file(
     if should_convert and source_format:
         target_filename = _get_converted_filename(file, source_format, convert_to)
         target_filepath = os.path.join(localDir, target_filename)
-        _convert_compression_format(filename, target_filepath, source_format, convert_to)
+        _convert_compression_format(
+            filename, target_filepath, source_format, convert_to
+        )
 
 
 def _download_files(
@@ -946,7 +994,7 @@ def download(
     client_id="vault-token-exchange",
     convert_to=None,
     convert_from=None,
-    validate_checksum: bool = False
+    validate_checksum: bool = False,
 ) -> None:
     """Download datasets from databus.
 
@@ -996,18 +1044,11 @@ def download(
             elif file is not None:
                 print(f"Downloading file: {databusURI}")
                 # Try to fetch expected checksum from the parent Version metadata
-                expected = None
-                if validate_checksum:
-                    try:
-                        if version is not None:
-                            version_uri = f"https://{host}/{account}/{group}/{artifact}/{version}"
-                            json_str = fetch_databus_jsonld(version_uri, databus_key=databus_key)
-                            checks = _extract_checksums_from_jsonld(json_str)
-                            expected = checks.get(databusURI) or checks.get(
-                                "https://" + databusURI.removeprefix("http://").removeprefix("https://")
-                            )
-                    except Exception as e:
-                        print(f"WARNING: Could not fetch checksum for single file: {e}")
+                expected = (
+                    get_expected_checksum(databusURI, databus_key)
+                    if validate_checksum
+                    else None
+                )
 
                 # Call the worker to download the single file (passes expected checksum)
                 _download_file(
@@ -1090,7 +1131,9 @@ def download(
             if validate_checksum:
                 checksums = _resolve_checksums_for_urls(res, databus_key)
                 if not checksums:
-                    print("WARNING: Checksum validation enabled but no checksums found for query results.")
+                    print(
+                        "WARNING: Checksum validation enabled but no checksums found for query results."
+                    )
 
             _download_files(
                 res,

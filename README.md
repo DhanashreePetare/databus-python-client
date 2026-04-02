@@ -178,6 +178,8 @@ docker run --rm -v $(pwd):/data dbpedia/databus-python-client download $DOWNLOAD
   - Enables on-the-fly compression format conversion during download. Supported formats: `bz2`, `gz`, `xz`. Downloaded files will be automatically decompressed and recompressed to the target format. Example: `--convert-to gz` converts all downloaded compressed files to gzip format.
 - `--convert-from`
   - Optional filter to specify which source compression format should be converted. Use with `--convert-to` to convert only files with a specific compression format. Example: `--convert-to gz --convert-from bz2` converts only `.bz2` files to `.gz`, leaving other formats unchanged.
+- `--validate-checksum`
+  - Validates the checksums of downloaded files against the checksums provided by the Databus. If a checksum does not match, an error is raised and the file is deleted.
 
 **Help and further information on download command:**
 ```bash
@@ -205,9 +207,9 @@ Options:
                               databus
   --all-versions              When downloading artifacts, download all
                               versions instead of only the latest
-  --authurl TEXT              Keycloak token endpoint URL  [default:
-                              https://auth.dbpedia.org/realms/dbpedia/protocol
-                              /openid-connect/token]
+  --authurl TEXT              Keycloak token endpoint URL  [default: https://a
+                              uth.dbpedia.org/realms/dbpedia/protocol/openid-
+                              connect/token]
   --clientid TEXT             Client ID for token exchange  [default: vault-
                               token-exchange]
   --convert-to [bz2|gz|xz]    Target compression format for on-the-fly
@@ -216,6 +218,7 @@ Options:
   --convert-from [bz2|gz|xz]  Source compression format to convert from
                               (optional filter). Only files with this
                               compression will be converted.
+  --validate-checksum         Validate checksums of downloaded files
   --help                      Show this message and exit.
 ```
 
@@ -318,9 +321,15 @@ Options:
   --version-id TEXT   Target databus version/dataset identifier of the form <h
                       ttps://databus.dbpedia.org/$ACCOUNT/$GROUP/$ARTIFACT/$VE
                       RSION>  [required]
-  --title TEXT        Dataset title  [required]
-  --abstract TEXT     Dataset abstract max 200 chars  [required]
-  --description TEXT  Dataset description  [required]
+  --title TEXT        Artifact & Version Title: used for BOTH artifact and
+                      version. Keep stable across releases; identifies the
+                      data series.  [required]
+  --abstract TEXT     Artifact & Version Abstract: used for BOTH artifact and
+                      version (max 200 chars). Updating it changes both
+                      artifact and version metadata.  [required]
+  --description TEXT  Artifact & Version Description: used for BOTH artifact
+                      and version. Supports Markdown. Updating it changes both
+                      artifact and version metadata.  [required]
   --license TEXT      License (see dalicc.net)  [required]
   --apikey TEXT       API key  [required]
   --metadata PATH     Path to metadata JSON file (for metadata mode)

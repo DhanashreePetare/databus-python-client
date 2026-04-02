@@ -37,7 +37,7 @@ def test_vault_host_no_token_raises():
     url = f"https://{vault_host}/some/protected/file.ttl"
 
     with pytest.raises(DownloadAuthError) as exc:
-        dl._download_file(url, localDir='.', vault_token_file=None)
+        dl._download_file(url, localDir=".", vault_token_file=None)
 
     assert "Vault token required" in str(exc.value)
 
@@ -48,11 +48,12 @@ def test_non_vault_host_no_token_allows_download(monkeypatch):
     resp_head = make_response(status=200, headers={})
     resp_get = make_response(status=200, headers={"content-length": "0"}, content=b"")
 
-    with patch("requests.head", return_value=resp_head), patch(
-        "requests.get", return_value=resp_get
+    with (
+        patch("requests.head", return_value=resp_head),
+        patch("requests.get", return_value=resp_get),
     ):
         # should not raise
-        dl._download_file(url, localDir='.', vault_token_file=None)
+        dl._download_file(url, localDir=".", vault_token_file=None)
 
 
 def test_401_after_token_exchange_reports_invalid_token(monkeypatch):
@@ -61,7 +62,9 @@ def test_401_after_token_exchange_reports_invalid_token(monkeypatch):
 
     # initial head and get -> 401 with Bearer
     resp_head = make_response(status=200, headers={})
-    resp_401 = make_response(status=401, headers={"WWW-Authenticate": "Bearer realm=\"auth\""})
+    resp_401 = make_response(
+        status=401, headers={"WWW-Authenticate": 'Bearer realm="auth"'}
+    )
 
     # after retry with token -> still 401
     resp_401_retry = make_response(status=401, headers={})
@@ -75,14 +78,16 @@ def test_401_after_token_exchange_reports_invalid_token(monkeypatch):
     post_resp_2 = Mock()
     post_resp_2.json.return_value = {"access_token": "VAULT"}
 
-    with patch("requests.head", return_value=resp_head), patch(
-        "requests.get", side_effect=get_side_effects
-    ), patch("requests.post", side_effect=[post_resp_1, post_resp_2]):
+    with (
+        patch("requests.head", return_value=resp_head),
+        patch("requests.get", side_effect=get_side_effects),
+        patch("requests.post", side_effect=[post_resp_1, post_resp_2]),
+    ):
         # set REFRESH_TOKEN so __get_vault_access__ doesn't try to open a file
         monkeypatch.setenv("REFRESH_TOKEN", "x" * 90)
 
         with pytest.raises(DownloadAuthError) as exc:
-            dl._download_file(url, localDir='.', vault_token_file="/does/not/matter")
+            dl._download_file(url, localDir=".", vault_token_file="/does/not/matter")
 
         assert "invalid or expired" in str(exc.value)
 
@@ -94,11 +99,12 @@ def test_403_reports_insufficient_permissions():
     resp_head = make_response(status=200, headers={})
     resp_403 = make_response(status=403, headers={})
 
-    with patch("requests.head", return_value=resp_head), patch(
-        "requests.get", return_value=resp_403
+    with (
+        patch("requests.head", return_value=resp_head),
+        patch("requests.get", return_value=resp_403),
     ):
         # provide a token path so early check does not block
         with pytest.raises(DownloadAuthError) as exc:
-            dl._download_file(url, localDir='.', vault_token_file="/some/token/file")
+            dl._download_file(url, localDir=".", vault_token_file="/some/token/file")
 
         assert "permission" in str(exc.value) or "forbidden" in str(exc.value)
