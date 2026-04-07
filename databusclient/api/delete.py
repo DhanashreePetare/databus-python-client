@@ -7,6 +7,7 @@ also allows batching of deletions.
 
 import json
 from typing import List
+from urllib.parse import urlparse
 
 import requests
 
@@ -55,13 +56,22 @@ class DeleteQueue:
         """Return True if the queue contains any URIs."""
         return len(self.queue) > 0
 
+    def sorted_queue(self) -> List[str]:
+        """Return a list of queued URIs sorted by path depth (deepest first)."""
+        return sorted(self.queue, key=self._path_depth, reverse=True)
+
+    @staticmethod
+    def _path_depth(uri: str) -> int:
+        """Return number of non-empty path segments in the URI."""
+        return len([part for part in urlparse(uri).path.split("/") if part])
+
     def execute(self):
         """Execute all queued deletions.
 
         Each queued URI will be deleted using `_delete_resource`.
         """
         _delete_list(
-            list(self.queue),
+            list(self.sorted_queue()),
             self.databus_key,
             force=True,
         )
