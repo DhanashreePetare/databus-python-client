@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 import requests
 from SPARQLWrapper import JSON, SPARQLWrapper
 from tqdm import tqdm
+from datetime import datetime, timezone
 
 from databusclient.api.utils import (
     fetch_databus_jsonld,
@@ -340,6 +341,7 @@ def _download_file(
     base_uri=None,
     validate_checksum: bool = False,
     expected_checksum: str | None = None,
+    manifest_context=None,
 ) -> None:
     """Download a file from the internet with a progress bar using tqdm.
 
@@ -500,30 +502,30 @@ def _download_file(
         raise IOError("Downloaded size does not match Content-Length header")
 
     # --- 6. Validate checksum on original downloaded file (BEFORE conversion) ---
+    actual_checksum = None
     if validate_checksum:
-        # reuse compute_sha256_and_length from webdav extension
         try:
-            actual, _ = compute_sha256_and_length(filename)
+            actual_checksum, _ = compute_sha256_and_length(filename)
         except (OSError, IOError) as e:
             print(f"WARNING: error computing checksum for {filename}: {e}")
-            actual = None
+            actual_checksum = None
 
         if expected_checksum is None:
             print(
                 f"WARNING: no expected checksum available for {filename}; skipping validation"
             )
-        elif actual is None:
+        elif actual_checksum is None:
             print(
                 f"WARNING: could not compute checksum for {filename}; skipping validation"
             )
         else:
-            if actual.lower() != expected_checksum.lower():
+            if actual_checksum.lower() != expected_checksum.lower():
                 try:
-                    os.remove(filename)  # delete corrupted file
+                    os.remove(filename)
                 except OSError:
                     pass
                 raise IOError(
-                    f"Checksum mismatch for {filename}: expected {expected_checksum}, got {actual}"
+                    f"Checksum mismatch for {filename}: expected {expected_checksum}, got {actual_checksum}"
                 )
 
     # --- 7. Unified compression/format conversion pass ---
@@ -534,6 +536,14 @@ def _download_file(
     needs_format_conversion = convert_format is not None
 
     if not should_convert_compression and not needs_format_conversion:
+        if manifest_context is not None:
+            manifest_context.record_file(
+                url=url,
+                status="success",
+                sha256=actual_checksum or expected_checksum,
+                size_bytes=total_size_in_bytes if total_size_in_bytes else None,
+                downloaded_at=datetime.now(timezone.utc).isoformat(),
+            )
         return
 
     temp_paths: list[str] = []
@@ -565,6 +575,14 @@ def _download_file(
                     source_fmt,
                     compression,
                 )
+            if manifest_context is not None:
+                manifest_context.record_file(
+                    url=url,
+                    status="success",
+                    sha256=actual_checksum or expected_checksum,
+                    size_bytes=total_size_in_bytes if total_size_in_bytes else None,
+                    downloaded_at=datetime.now(timezone.utc).isoformat(),
+                )
             return
 
         # Early exit: if format conversion is requested but input format
@@ -584,6 +602,14 @@ def _download_file(
                         filename, target_filepath, source_fmt, compression
                     )
                 # No format conversion needed, no further work.
+                if manifest_context is not None:
+                    manifest_context.record_file(
+                        url=url,
+                        status="success",
+                        sha256=actual_checksum or expected_checksum,
+                        size_bytes=total_size_in_bytes if total_size_in_bytes else None,
+                        downloaded_at=datetime.now(timezone.utc).isoformat(),
+                    )
                 return
 
         # Determine input for format conversion.
@@ -649,6 +675,14 @@ def _download_file(
             if os.path.exists(filename):
                 os.remove(filename)
                 print(f"Removed original file: {os.path.basename(filename)}")
+            if manifest_context is not None:
+                manifest_context.record_file(
+                    url=url,
+                    status="success",
+                    sha256=actual_checksum or expected_checksum,
+                    size_bytes=total_size_in_bytes if total_size_in_bytes else None,
+                    downloaded_at=datetime.now(timezone.utc).isoformat(),
+                )
             return
 
         # Standard single-output-file path (Layer 2, and the remaining
@@ -706,6 +740,16 @@ def _download_file(
             if os.path.exists(temp_path):
                 os.remove(temp_path)
 
+    # Record file to manifest only after all conversion completes successfully.
+    # This ensures the manifest reflects the actual final output, not just the download.
+    if manifest_context is not None:
+        manifest_context.record_file(
+            url=url,
+            status="success",
+            sha256=actual_checksum or expected_checksum,
+            size_bytes=total_size_in_bytes if total_size_in_bytes else None,
+            downloaded_at=datetime.now(timezone.utc).isoformat(),
+        )
 
 def _download_files(
     urls: List[str],
@@ -718,6 +762,7 @@ def _download_files(
     convert_format: str = None,
     graph_name: str = None,
     base_uri: str = None,
+    manifest_context=None,
     validate_checksum: bool = False,
     checksums: dict | None = None,
 ) -> None:
@@ -754,6 +799,7 @@ def _download_files(
             base_uri=base_uri,
             validate_checksum=validate_checksum,
             expected_checksum=expected,
+            manifest_context=manifest_context,
         )
 
 def _get_sparql_query_of_collection(uri: str, databus_key: str | None = None) -> str:
@@ -901,6 +947,7 @@ def _download_collection(
     convert_format: str = None,
     graph_name: str = None,
     base_uri: str = None,
+    manifest_context=None,
     validate_checksum: bool = False,
 ) -> None:
     """Download all files in a databus collection.
@@ -940,6 +987,7 @@ def _download_collection(
         convert_format=convert_format,
         graph_name=graph_name,
         base_uri=base_uri,
+        manifest_context=manifest_context,
         validate_checksum=validate_checksum,
         checksums=checksums if checksums else None,
     )
@@ -956,6 +1004,7 @@ def _download_version(
     convert_format: str = None,
     graph_name: str = None,
     base_uri: str = None,
+    manifest_context=None,
     validate_checksum: bool = False,
 ) -> None:
     """Download all files in a databus artifact version.
@@ -993,6 +1042,7 @@ def _download_version(
         convert_format=convert_format,
         graph_name=graph_name,
         base_uri=base_uri,
+        manifest_context=manifest_context,
         validate_checksum=validate_checksum,
         checksums=checksums,
     )
@@ -1010,6 +1060,7 @@ def _download_artifact(
     convert_format: str = None,
     graph_name: str = None,
     base_uri: str = None,
+    manifest_context=None,
     validate_checksum: bool = False,
 ) -> None:
     """Download files in a databus artifact.
@@ -1054,6 +1105,7 @@ def _download_artifact(
             convert_format=convert_format,
             graph_name=graph_name,
             base_uri=base_uri,
+            manifest_context=manifest_context,
             validate_checksum=validate_checksum,
             checksums=checksums,
         )
@@ -1132,6 +1184,7 @@ def _download_group(
     convert_format: str = None,
     graph_name: str = None,
     base_uri: str = None,
+    manifest_context=None,
     validate_checksum: bool = False,
 ) -> None:
     """Download files in a databus group.
@@ -1166,6 +1219,7 @@ def _download_group(
             convert_format=convert_format,
             graph_name=graph_name,
             base_uri=base_uri,
+            manifest_context=manifest_context,
             validate_checksum=validate_checksum,
         )
 
@@ -1218,6 +1272,7 @@ def download(
     graph_name=None,
     base_uri=None,
     validate_checksum: bool = False,
+    manifest_context=None,
 ) -> None:
     """Download datasets from databus.
 
@@ -1267,6 +1322,7 @@ def download(
                     convert_format,
                     graph_name=graph_name,
                     base_uri=base_uri,
+                    manifest_context=manifest_context,
                     validate_checksum=validate_checksum,
                 )
             elif file is not None:
@@ -1290,6 +1346,7 @@ def download(
                     convert_format=convert_format,
                     graph_name=graph_name,
                     base_uri=base_uri,
+                    manifest_context=manifest_context,
                     validate_checksum=validate_checksum,
                     expected_checksum=expected,
                 )
@@ -1306,6 +1363,7 @@ def download(
                     convert_format=convert_format,
                     graph_name=graph_name,
                     base_uri=base_uri,
+                    manifest_context=manifest_context,
                     validate_checksum=validate_checksum,
                 )
             elif artifact is not None:
@@ -1324,6 +1382,7 @@ def download(
                     convert_format=convert_format,
                     graph_name=graph_name,
                     base_uri=base_uri,
+                    manifest_context=manifest_context,
                     validate_checksum=validate_checksum,
                 )
             elif group is not None and group != "collections":
@@ -1342,6 +1401,7 @@ def download(
                     convert_format=convert_format,
                     graph_name=graph_name,
                     base_uri=base_uri,
+                    manifest_context=manifest_context,
                     validate_checksum=validate_checksum,
                 )
             elif account is not None:
@@ -1382,6 +1442,7 @@ def download(
                 convert_format=convert_format,
                 graph_name=graph_name,
                 base_uri=base_uri,
+                manifest_context=manifest_context,
                 validate_checksum=validate_checksum,
                 checksums=checksums if checksums else None,
             )
