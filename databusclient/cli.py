@@ -152,7 +152,7 @@ def deploy(
 @click.argument("databusuris", nargs=-1, required=True)
 @click.option(
     "--localdir",
-    help="Local databus folder (if not given, databus folder structure is created in current working directory)",
+    help="Base directory for the local Databus folder structure (if not given, current working directory is used)",
 )
 @click.option(
     "--databus",

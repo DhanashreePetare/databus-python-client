@@ -167,7 +167,7 @@ docker run --rm -v $(pwd):/data dbpedia/databus-python-client download $DOWNLOAD
 - `$DOWNLOADTARGET`
   - Can be any Databus URI including collections OR SPARQL query (or several thereof).
 - `--localdir`
-  - If no `--localdir` is provided, the current working directory is used as base directory. The downloaded files will be stored in the working directory in a folder structure according to the Databus layout, i.e. `./$ACCOUNT/$GROUP/$ARTIFACT/$VERSION/`.
+  - If no `--localdir` is provided, the current working directory is used as base directory `./$ACCOUNT/$GROUP/$ARTIFACT/$VERSION/`. If `--localdir` is provided, it is used as the base directory for the same Databus layout, i.e. `$LOCALDIR/$ACCOUNT/$GROUP/$ARTIFACT/$VERSION/`.
 - `--vault-token`
   - If the dataset/files to be downloaded require vault authentication, you need to provide a vault token with `--vault-token /path/to/vault-token.dat`. See [Registration (Access Token)](#registration-access-token) for details on how to get a vault token.
   
@@ -196,9 +196,9 @@ Usage: databusclient download [OPTIONS] DATABUSURIS...
   using --convert-to and --convert-from options.
 
 Options:
-  --localdir TEXT             Local databus folder (if not given, databus
-                              folder structure is created in current working
-                              directory)
+  --localdir TEXT             Base directory for the local Databus folder
+                              structure (if not given, current working
+                              directory is used)
   --databus TEXT              Databus URL (if not given, inferred from
                               databusuri, e.g.
                               https://databus.dbpedia.org/sparql)

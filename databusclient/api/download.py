@@ -31,6 +31,19 @@ COMPRESSION_MODULES = {
 }
 
 
+def _get_download_directory(url: str, localDir: str | None) -> str:
+    """Return the local Databus-layout directory for a file URL."""
+    _host, account, group, artifact, version, file = get_databus_id_parts_from_file_url(
+        url
+    )
+    base_dir = localDir if localDir is not None else os.getcwd()
+
+    if all([account, group, artifact, version, file]):
+        return os.path.join(base_dir, account, group, artifact, version)
+
+    return base_dir
+
+
 def _detect_compression_format(filename: str) -> Optional[str]:
     """Detect compression format from file extension.
 
@@ -330,17 +343,9 @@ def _download_file(
         validate_checksum: Whether to validate checksums after downloading.
         expected_checksum: The expected checksum of the file.
     """
-    if localDir is None:
-        _host, account, group, artifact, version, file = (
-            get_databus_id_parts_from_file_url(url)
-        )
-        localDir = os.path.join(
-            os.getcwd(),
-            account,
-            group,
-            artifact,
-            version if version is not None else "latest",
-        )
+    local_dir_was_given = localDir is not None
+    localDir = _get_download_directory(url, localDir)
+    if not local_dir_was_given:
         print(f"Local directory not given, using {localDir}")
 
     file = url.split("/")[-1]
