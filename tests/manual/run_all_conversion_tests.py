@@ -1,6 +1,7 @@
 """
 Layer 2 Conversion Testing Script
 Tests every conversion combination systematically.
+Base fixture files live under tests/resources/ (base.ttl, base.nq, base.csv).
 Outputs go to test_outputs/ folder.
 Test file for testing with real datasets from databus.
 """
@@ -70,7 +71,7 @@ def run_test(test_id, description, func, input_file, output_file, *args):
 
 print("\n=== GROUP 1: RDF TRIPLE FORMAT CONVERSIONS ===\n")
 
-BASE_TTL = "test_outputs/base/base.ttl"
+BASE_TTL = "tests/resources/base.ttl"
 
 # T1: turtle -> ntriples (from base turtle file)
 t1_out = "test_outputs/triples/T1_turtle_to_ntriples/output.nt"
@@ -142,7 +143,7 @@ else:
 
 print("\n=== GROUP 2: RDF QUAD FORMAT CONVERSIONS ===\n")
 
-BASE_NQ = "test_outputs/base/base.nq"
+BASE_NQ = "tests/resources/base.nq"
 
 # Q1: nquads -> trig
 q1_out = "test_outputs/quads/Q1_nquads_to_trig/output.trig"
@@ -275,8 +276,8 @@ else:
 
 print("\n=== GROUP 3: TABULAR FORMAT CONVERSIONS ===\n")
 
-BASE_CSV = "test_outputs/base/base.csv"
-BASE_TSV = "test_outputs/base/base.tsv"
+BASE_CSV = "tests/resources/base.csv"
+BASE_TSV = "tests/resources/base.tsv"
 
 # TAB1: csv -> tsv
 tab1_out = "test_outputs/tabular/TAB1_csv_to_tsv/output.tsv"
@@ -306,19 +307,19 @@ else:
 print("\n=== GROUP 4: CLI END-TO-END (run these manually) ===\n")
 cli_tests = [
     "CLI1: turtle->ntriples from compressed Databus file",
-    "  poetry run databusclient download \"https://databus.dbpedia.org/dbpedia/mappings/mappingbased-literals/2022.12.01/mappingbased-literals_lang=cy.ttl.bz2\" --convert-format ntriples --localdir ./test_outputs/cli/CLI1",
+    "  poetry run databusclient download \"https://databus.dbpedia.org/dbpedia/mappings/mappingbased-literals/2022.12.01/mappingbased-literals_lang=cy.ttl.bz2\" --format ntriples --localdir ./test_outputs/cli/CLI1",
     "",
     "CLI2: turtle->rdf-xml from compressed Databus file",
-    "  poetry run databusclient download \"https://databus.dbpedia.org/dbpedia/mappings/mappingbased-literals/2022.12.01/mappingbased-literals_lang=cy.ttl.bz2\" --convert-format rdf-xml --localdir ./test_outputs/cli/CLI2",
+    "  poetry run databusclient download \"https://databus.dbpedia.org/dbpedia/mappings/mappingbased-literals/2022.12.01/mappingbased-literals_lang=cy.ttl.bz2\" --format rdf-xml --localdir ./test_outputs/cli/CLI2",
     "",
     "CLI3: turtle->ntriples + compression bz2->gz",
-    "  poetry run databusclient download \"https://databus.dbpedia.org/dbpedia/mappings/mappingbased-literals/2022.12.01/mappingbased-literals_lang=cy.ttl.bz2\" --convert-format ntriples --convert-to gz --localdir ./test_outputs/cli/CLI3",
+    "  poetry run databusclient download \"https://databus.dbpedia.org/dbpedia/mappings/mappingbased-literals/2022.12.01/mappingbased-literals_lang=cy.ttl.bz2\" --format ntriples --compression gz --localdir ./test_outputs/cli/CLI3",
     "",
     "CLI4: turtle->ntriples + compression bz2->xz",
-    "  poetry run databusclient download \"https://databus.dbpedia.org/dbpedia/mappings/mappingbased-literals/2022.12.01/mappingbased-literals_lang=cy.ttl.bz2\" --convert-format ntriples --convert-to xz --localdir ./test_outputs/cli/CLI4",
+    "  poetry run databusclient download \"https://databus.dbpedia.org/dbpedia/mappings/mappingbased-literals/2022.12.01/mappingbased-literals_lang=cy.ttl.bz2\" --format ntriples --compression xz --localdir ./test_outputs/cli/CLI4",
     "",
     "CLI5: unsupported cross-class error (expect ValueError)",
-    "  poetry run databusclient download \"https://databus.dbpedia.org/dbpedia/mappings/mappingbased-literals/2022.12.01/mappingbased-literals_lang=cy.ttl.bz2\" --convert-format nquads --localdir ./test_outputs/cli/CLI5",
+    "  poetry run databusclient download \"https://databus.dbpedia.org/dbpedia/mappings/mappingbased-literals/2022.12.01/mappingbased-literals_lang=cy.ttl.bz2\" --format nquads --localdir ./test_outputs/cli/CLI5",
 ]
 for line in cli_tests:
     print(line)
