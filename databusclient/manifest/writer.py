@@ -11,6 +11,7 @@ import json
 import os
 
 from databusclient.manifest.context import ManifestContext
+from databusclient.version import __version__
 
 # JSON-LD context using DataID vocabulary — same vocabulary used
 # by the Databus platform itself for semantic interoperability.
@@ -23,7 +24,6 @@ _JSONLD_CONTEXT = {
 }
 
 _SCHEMA_VERSION = "1.0"
-_CLIENT_VERSION = "0.15"
 
 
 class ManifestWriter:
@@ -70,7 +70,7 @@ class ManifestWriter:
             "@context": _JSONLD_CONTEXT,
             "@type": "dbus:OperationManifest",
             "dbus:schemaVersion": _SCHEMA_VERSION,
-            "dbus:clientVersion": _CLIENT_VERSION,
+            "dbus:clientVersion": __version__,
             "dbus:command": context.command,
             "dcterms:issued": {
                 "@value": context.issued,

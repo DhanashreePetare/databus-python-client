@@ -40,12 +40,3 @@ jobs:
           tags: |
             dbpedia/databus-python-client:latest
             dbpedia/databus-python-client:${{ steps.package.outputs.version }}
-
-      - name: Update Docker Hub overview
-        uses: peter-evans/dockerhub-description@v5
-        with:
-          username: ${{ secrets.DBP_DOCKERHUB_CREDENTIAL_USERNAME }}
-          password: ${{ secrets.DBP_DOCKERHUB_CREDENTIAL_TOKEN_PUSHIMAGES }}
-          repository: dbpedia/databus-python-client
-          short-description: Command-line and Python client for downloading, deploying and deleting datasets on DBpedia Databus.
-          readme-filepath: ./doc/docker/README.md
